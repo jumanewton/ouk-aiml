@@ -97,7 +97,7 @@ def build_maze(width: int=4, height: int=4) -> dict[str, any] {
         for x=0 to x<width by x+=1 {
             label = f"Room ({x}, {y})";
             desc = random.choice(flavors);
-            new_room = player.Room(id=label, x=x, y=y, description=desc);
+            new_room = player.Room(id=label, x=x, y=y, neighbors={}, description=desc);
             new_room.neighbors = {};
             row.append(new_room);
             all_rooms.append(new_room);

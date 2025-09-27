@@ -1,12 +1,48 @@
-"""Player walker that explores the randomly generated maze."""
+"""Player walker that explores the randomly generated maze.
 
+AI hints use the Gemini model through ByLLM. Set `GOOGLE_API_KEY` or
+`GEMINI_API_KEY` in the environment before launching the maze to enable
+those hints. When neither is set, the player proceeds without LLM support.
+"""
+
+import os;
 import random;
+import from byllm { Model }
+
+glob GEMINI_API_ENV_VARS = ["GOOGLE_API_KEY", "GEMINI_API_KEY"];
+
+def _load_gemini_api_key() -> str | None {
+    for var_name in GEMINI_API_ENV_VARS {
+        value = os.getenv(var_name);
+        if value {
+            return value;
+        }
+    }
+    return None;
+}
+
+glob gemini_api_key = _load_gemini_api_key();
+
+glob hint_llm = Model(
+    model_name="gemini/gemini-2.0-flash",
+    verbose=False,
+    api_key=gemini_api_key,
+);
+
+"""Generate a concise hint that helps the player progress in the maze."""
+def generate_hint(
+    room_name: str,
+    room_description: str,
+    exits: list[str],
+    has_key: bool,
+    threats: list[str],
+) -> str by hint_llm();
 
 node Room {
     has id: str;
     has x: int;
     has y: int;
-    has neighbors: dict[str, Room] = {};
+    has neighbors: dict[str, Room];
     has description: str = "";
     has is_start: bool = False;
     has is_exit: bool = False;
@@ -29,6 +65,7 @@ walker Player {
     has alive: bool = True;
     has victory: bool = False;
     has history: list[str] = [];
+    has hint_warning_shown: bool = False;
 
     can play with Room entry {
         here.visited = True;
@@ -63,6 +100,10 @@ walker Player {
             }
             if command == "map" {
                 self.print_history();
+                continue;
+            }
+            if command == "hint" {
+                self.provide_hint(here);
                 continue;
             }
             next_room = here.neighbors.get(command);
@@ -134,7 +175,7 @@ walker Player {
     }
 
     def prompt_action(room: Room) -> str {
-        prompt = "Choose a direction or type 'status', 'map', 'help', or 'quit': ";
+        prompt = "Choose a direction or type 'status', 'map', 'help', 'hint', or 'quit': ";
         while True {
             choice = input(prompt).strip().lower();
             if choice {
@@ -163,6 +204,37 @@ walker Player {
         for rid in self.history {
             print(f"  {idx}. {rid}");
             idx += 1;
+        }
+    }
+
+    def provide_hint(room: Room) {
+        exits = sorted(room.neighbors.keys());
+        threats = [];
+        if room.has_monster {
+            threats.append("monster");
+        }
+        if room.has_trap {
+            threats.append("trap");
+        }
+        if not gemini_api_key {
+            if not self.hint_warning_shown {
+                print("AI hint unavailable. Set GOOGLE_API_KEY or GEMINI_API_KEY and restart.");
+                self.hint_warning_shown = True;
+            }
+            return;
+        }
+        try {
+            hint = generate_hint(
+                room_name=room.id,
+                room_description=room.description,
+                exits=exits,
+                has_key=self.has_key,
+                threats=threats,
+            );
+            print(f"AI hint: {hint}");
+        } except Exception as err {
+            print("AI hint unavailable. Rely on your instincts!");
+            print(f"(details: {err})");
         }
     }
 }
