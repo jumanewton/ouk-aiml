@@ -109,8 +109,10 @@ walker Player {
             next_room = here.neighbors.get(command);
             if next_room {
                 self.steps += 1;
-                visit next_room;
-                here.visited = True;
+                here = next_room;
+                if not here.visited {
+                    here.visited = True;
+                }
                 self.history.append(here.id);
             } else {
                 print("You can't go that way.");
