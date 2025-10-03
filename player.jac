@@ -11,6 +11,61 @@ import from byllm { Model }
 
 glob GEMINI_API_ENV_VARS = ["GOOGLE_API_KEY", "GEMINI_API_KEY"];
 
+glob DEFAULT_SECRET_PATHS = [
+    os.getenv("MAZE_SECRETS_FILE"),
+    os.path.expanduser("~/.config/maze-secrets.env"),
+    os.path.expanduser("~/.maze-secrets"),
+];
+
+def _load_from_secret_files() -> str | None {
+    for maybe_path in DEFAULT_SECRET_PATHS {
+        if not maybe_path {
+            continue;
+        }
+        cleaned_path = maybe_path.strip();
+        if not cleaned_path {
+            continue;
+        }
+        if not os.path.exists(cleaned_path) {
+            continue;
+        }
+        try {
+            with open(cleaned_path, "r") as secrets_file {
+                for raw_line in secrets_file {
+                    line = raw_line.strip();
+                    if not line or line.startswith("#") {
+                        continue;
+                    }
+                    for env_name in GEMINI_API_ENV_VARS {
+                        prefix_options = [f"export {env_name}=", f"{env_name}="];
+                        for prefix in prefix_options {
+                            if not line.startswith(prefix) {
+                                continue;
+                            }
+                            value = line[len(prefix):].strip();
+                            if len(value) >= 2 {
+                                first_code = ord(value[0]);
+                                if first_code == ord(value[-1]) {
+                                    if first_code == 34 or first_code == 39 {
+                                        value = value[1:-1];
+                                    }
+                                }
+                            }
+                            if value {
+                                os.environ[env_name] = value;
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        } except Exception as err {
+            print(f"Warning: unable to read secret file {cleaned_path}: {err}");
+        }
+    }
+    return None;
+}
+
 def _load_gemini_api_key() -> str | None {
     for var_name in GEMINI_API_ENV_VARS {
         value = os.getenv(var_name);
@@ -18,7 +73,7 @@ def _load_gemini_api_key() -> str | None {
             return value;
         }
     }
-    return None;
+    return _load_from_secret_files();
 }
 
 glob gemini_api_key = _load_gemini_api_key();
