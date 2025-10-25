@@ -1,0 +1,11 @@
+streamlit
+requests
+markdown
+byllm
+jac-cloud
+GitPython
+networkx
+graphviz
+jinja2
+tree-sitter
+matplotlib
