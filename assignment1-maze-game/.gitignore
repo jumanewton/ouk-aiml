@@ -5,10 +5,8 @@ __pycache__/
 
 # Virtual environments
 venv/
-.env
+.env/
 .venv/
 
 # Jac intermediate artifacts
-*.jir
-
 *.jir
