@@ -2,7 +2,6 @@ import networkx as nx
 import json
 from typing import List, Dict, Any
 from pathlib import Path
-import byllm
 
 class CodeContextGraph:
     def __init__(self):
@@ -78,20 +77,7 @@ def build_ccg(target_files: List[str]) -> CodeContextGraph:
 
 def summarize_module(module_path: str, symbols: List[Dict], code_snippet: str = "") -> str:
     """
-    Summarize a module using LLM.
+    Summarize a module using a simple fallback.
+    LLM summarization is now handled in Jac.
     """
-    prompt = f"""Return a Markdown fragment with heading equal to module path, then 2-3 sentence description, list exported functions/classes with one-line descriptions, and sample usage if a main entry point exists. If unsure about a function's behavior, use 'behaviour unclear from source'.
-
-Module: {module_path}
-
-Symbols:
-{json.dumps(symbols, indent=2)}
-
-Code snippet:
-{code_snippet[:1000]}
-"""
-    try:
-        response = byllm.generate(prompt)
-        return response
-    except Exception as e:
-        return f"# {module_path}\nError summarizing: {str(e)}"
+    return f"# {module_path}\n\nModule summary not available (LLM required for detailed summary).\n\nSymbols: {len(symbols)} found."

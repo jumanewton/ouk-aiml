@@ -70,14 +70,8 @@ USAGE_TEMPLATE = Template("""
 """)
 
 API_REFERENCE_TEMPLATE = Template("""
-{% for module, symbols in api.items() %}
-### {{ module }}
-
-{% for symbol in symbols %}
-#### `{{ symbol.signature }}`
-{{ symbol.docstring }}
-
-{% endfor %}
+{% for module, summary in api.items() %}
+{{ summary }}
 {% endfor %}
 """)
 

@@ -46,12 +46,24 @@ def find_readme(root_path: str) -> str:
 
 def summarize_readme(readme_content: str) -> str:
     """
-    Stub: Summarize the README content. In full implementation, use LLM.
+    Summarize the README content using a simple heuristic fallback.
+    LLM summarization is now handled in Jac.
     """
     if not readme_content:
         return "No README found."
-    lines = readme_content.split('\n')[:10]  # First 10 lines
-    return "Summary: " + " ".join(lines).strip()
+    
+    # Fallback: first non-empty lines up to a short character budget
+    lines = [l.strip() for l in readme_content.split('\n') if l.strip()]
+    if not lines:
+        return "No README found."
+    summary_lines = []
+    chars = 0
+    for l in lines[:10]:
+        summary_lines.append(l)
+        chars += len(l)
+        if chars > 240:
+            break
+    return "Summary: " + " ".join(summary_lines).strip()
 
 def find_entry_points(root_path: str) -> List[str]:
     """
@@ -60,11 +72,12 @@ def find_entry_points(root_path: str) -> List[str]:
     entry_files = []
     root = Path(root_path)
 
-    # Specific files
+    # Specific files (top-level)
     candidates = ["main.py", "app.py", "__main__.py", "setup.py", "pyproject.toml", "Procfile"]
     for cand in candidates:
-        if (root / cand).exists():
-            entry_files.append(str(root / cand))
+        p = root / cand
+        if p.exists():
+            entry_files.append(str(p))
 
     # .jac files
     for jac_file in root.rglob("*.jac"):
@@ -84,7 +97,16 @@ def find_entry_points(root_path: str) -> List[str]:
         except Exception:
             pass
 
-    return entry_files
+    # Dedupe while preserving order
+    seen = set()
+    deduped = []
+    for p in entry_files:
+        if p not in seen:
+            deduped.append(p)
+            seen.add(p)
+
+    # Limit results to a reasonable number (keep top candidates)
+    return deduped[:50]
 
 def map_repo(local_path: str) -> Dict[str, Any]:
     """

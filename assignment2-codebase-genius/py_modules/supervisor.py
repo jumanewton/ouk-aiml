@@ -8,7 +8,6 @@ from ccg import build_ccg
 from parser_utils import parse_file
 import docgenie as docgenie_mod
 
-
 def generate_docs(repo_url: str, outputs_dir: str = "./outputs"):
     """High-level wrapper to run the full pipeline and return a result dict or docs path.
 
