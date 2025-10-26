@@ -32,7 +32,7 @@ def generate_docs(repo_url: str, outputs_dir: str = "./outputs"):
             parsed = parse_file(t)
             symbols.extend(parsed.get("symbols", []))
 
-        docs_path = docgenie_mod.generate_docs(repo_url, repo_map, ccg, symbols, outputs_dir)
+        docs_path = docgenie_mod.generate_docs(repo_url, repo_map, ccg, symbols, targets, outputs_dir)
         return {"success": True, "docs_path": docs_path}
     finally:
         # best-effort cleanup

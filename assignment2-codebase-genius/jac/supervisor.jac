@@ -1,56 +1,84 @@
 node CodeGenius {
-    walker plan_documentation_targets(repo_map: dict) -> dict {
-        readme_summary = repo_map.get('readme_summary', '');
-        entry_points = repo_map.get('entry_points', []);
-        file_tree = repo_map.get('file_tree', {});
-        
-        prompt = "Based on the repository summary and structure, prioritize the top 5-10 files that should be documented first for a comprehensive overview. Focus on entry points, main modules, and high-impact files.\n\nREADME Summary: " + readme_summary + "\n\nEntry Points: " + ', '.join(entry_points) + "\n\nFile Tree (top-level): " + str(file_tree)[:1000] + "\n\nReturn a JSON list of prioritized file paths (relative to repo root).";
-        
-        try {
+    walker init {
+        can enter with root entry {
+            report(root);
+        }
+        obj __specs__ {
+            static has auth: bool = False;
+        }
+    }
+    walker main {
+        can enter with root entry {
+            repo_url = py_module.os.environ.get('REPO_URL', "https://github.com/octocat/Hello-World");
+            result = self.generate_docs(repo_url=repo_url);
+            if result.get('success') {
+                py_module.print("Docs generated at " + result.get('docs_path'));
+            } else {
+                py_module.print("Error: " + result.get('error'));
+            }
+        }
+        obj __specs__ {
+            static has auth: bool = False;
+        }
+    }
+    walker plan_documentation_targets {
+        has repo_map: dict;
+        can enter with root entry {
+            readme_summary = self.repo_map.get('readme_summary', '');
+            entry_points = self.repo_map.get('entry_points', []);
+            file_tree = self.repo_map.get('file_tree', {});
+            
+            prompt = "Based on the repository summary and structure, prioritize the top 5-10 files that should be documented first for a comprehensive overview. Focus on entry points, main modules, and high-impact files.\n\nREADME Summary: " + readme_summary + "\n\nEntry Points: " + ', '.join(entry_points) + "\n\nFile Tree (top-level): " + str(file_tree)[:1000] + "\n\nReturn a JSON list of prioritized file paths (relative to repo root).";
+            
             response = py_module.byllm.generate(prompt);
             prioritized = py_module.json.loads(response);
             if isinstance(prioritized, list) {
-                return {"prioritized_files": prioritized};
+                return py_module.dict([["prioritized_files", prioritized]]);
             }
-        } catch {
-            # fall through to fallback
+            
+            # Fallback to entry points
+            return py_module.dict([["prioritized_files", entry_points]]);
         }
-        
-        # Fallback to entry points
-        return {"prioritized_files": entry_points};
+        obj __specs__ {
+            static has auth: bool = False;
+        }
     }
     
-    walker generate_docs(repo_url: str, outputs_dir: str = "./outputs") -> dict {
-        clone_result = py_module.git_utils.clone_repo(repo_url);
-        if not clone_result.get('success') {
-            return {"success": False, "error": clone_result.get('error')};
-        }
-        
-        local_path = clone_result.get('path');
-        try {
+    walker generate_docs {
+        has repo_url: str;
+        has outputs_dir: str = "./outputs";
+        can enter with root entry {
+            clone_result = py_module.git_utils.clone_repo(self.repo_url);
+            if not clone_result.get('success') {
+                return py_module.dict([["success", False], ["error", clone_result.get('error')]]);
+            }
+            
+            local_path = clone_result.get('path');
             repo_map = py_module.repo_mapper.map_repo(local_path);
             
-            plan = self.plan_documentation_targets(repo_map);
-            targets = plan.get('prioritized_files', repo_map.get('entry_points') or []);
+            plan = self.plan_documentation_targets(repo_map=repo_map);
+            targets = plan.get('prioritized_files');
             if not targets {
-                targets = [str(p) for p in py_module.pathlib.Path(local_path).rglob("*.py")][:10];
+                targets = repo_map.get('entry_points');
+            }
+            if not targets {
+                targets = py_module.list(py_module.pathlib.Path(local_path).rglob("*.py"));
             }
             
             ccg = py_module.ccg.build_ccg(targets);
             
-            symbols = [];
+            symbols = py_module.list();
             for t in targets {
                 parsed = py_module.parser_utils.parse_file(t);
-                symbols.extend(parsed.get('symbols', []));
+                symbols.extend(parsed.get('symbols', py_module.list()));
             }
             
-            docs_path = py_module.docgenie.generate_docs(repo_url, repo_map, ccg, symbols, outputs_dir);
-            return {"success": True, "docs_path": docs_path};
-        } finally {
-            try {
-                py_module.shutil.rmtree(local_path);
-            } catch {
-            }
+            docs_path = py_module.docgenie.generate_docs(self.repo_url, repo_map, ccg, symbols, self.outputs_dir);
+            py_module.shutil.rmtree(local_path);
+            return py_module.dict([["success", True], ["docs_path", docs_path]]);
+        }
+        obj __specs__ {
+            static has auth: bool = False;
         }
     }
 }
