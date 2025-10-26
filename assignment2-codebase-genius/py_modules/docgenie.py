@@ -1,29 +1,20 @@
 import os
 from pathlib import Path
 from typing import Dict, Any, List
-import byllm
 from doc_template import (
     render_overview, render_installation, render_usage, 
     render_api_reference, render_architecture, render_contributing,
     assemble_docs
 )
 from diagram import generate_diagrams
+from ccg import CodeContextGraph, summarize_module
 
 def rewrite_section_with_llm(section_name: str, content: str) -> str:
     """
-    Use LLM to rewrite a section for better readability.
+    Rewrite a section using a simple fallback.
+    LLM rewriting is now handled in Jac.
     """
-    prompt = f"""Rewrite the following {section_name} section to be more user-friendly and professional. Keep it concise but informative. Do not add new information.
-
-Original:
-{content}
-
-Rewritten:"""
-    try:
-        response = byllm.generate(prompt)
-        return response.strip()
-    except Exception:
-        return content
+    return content
 
 def generate_usage_examples(ccg: 'CodeContextGraph', symbols: List[Dict]) -> List[Dict]:
     """
@@ -59,9 +50,9 @@ def detect_installation_info(file_tree: Dict) -> Dict:
         'has_pyproject': has_pyproject
     }
 
-def assemble_api_reference(symbols: List[Dict]) -> Dict[str, List]:
+def assemble_api_reference(symbols: List[Dict], targets: List[str]) -> Dict[str, str]:
     """
-    Group symbols by module for API reference.
+    Group symbols by module and generate LLM summaries for each module.
     """
     api = {}
     for sym in symbols:
@@ -69,9 +60,26 @@ def assemble_api_reference(symbols: List[Dict]) -> Dict[str, List]:
         if module not in api:
             api[module] = []
         api[module].append(sym)
-    return api
+    
+    # Generate summaries
+    summaries = {}
+    for module, syms in api.items():
+        # Find a target file that matches the module
+        code_snippet = ""
+        for target in targets:
+            if module in target:
+                try:
+                    with open(target, 'r', encoding='utf-8') as f:
+                        code_snippet = f.read()[:1000]  # First 1000 chars
+                    break
+                except:
+                    pass
+        summary = summarize_module(module, syms, code_snippet)
+        summaries[module] = summary
+    
+    return summaries
 
-def generate_docs(repo_url: str, repo_map: Dict, ccg: 'CodeContextGraph', symbols: List[Dict], output_dir: str) -> str:
+def generate_docs(repo_url: str, repo_map: Dict, ccg: 'CodeContextGraph', symbols: List[Dict], targets: List[str], output_dir: str) -> str:
     """
     Generate the full documentation.
     """
@@ -95,7 +103,7 @@ def generate_docs(repo_url: str, repo_map: Dict, ccg: 'CodeContextGraph', symbol
     usage = render_usage(examples)
     usage = rewrite_section_with_llm("Usage", usage)
 
-    api_data = assemble_api_reference(symbols)
+    api_data = assemble_api_reference(symbols, targets)
     api_reference = render_api_reference(api_data)
     api_reference = rewrite_section_with_llm("API Reference", api_reference)
 

@@ -48,7 +48,7 @@ def main():
     print(f"Symbols: {len(symbols)}")
 
     # Assemble docs
-    docs_path = generate_docs(repo_url, repo_map, ccg, symbols, "./outputs")
+    docs_path = generate_docs(repo_url, repo_map, ccg, symbols, targets, "./outputs")
     print(f"Docs generated at {docs_path}")
 
     # Clean up temp dir

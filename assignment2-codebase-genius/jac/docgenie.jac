@@ -10,17 +10,6 @@ node DocGenie {
         }
     }
     
-    walker summarize_module(module_path: str, symbols: list, code_snippet: str = "") -> str {
-        prompt = "Return a Markdown fragment with heading equal to module path, then 2-3 sentence description, list exported functions/classes with one-line descriptions, and sample usage if a main entry point exists. If unsure about a function's behavior, use 'behaviour unclear from source'.\n\nModule: " + module_path + "\n\nSymbols:\n" + py_module.json.dumps(symbols, indent=2) + "\n\nCode snippet:\n" + code_snippet[:1000];
-        
-        try {
-            response = py_module.byllm.generate(prompt);
-            return response;
-        } catch e {
-            return "# " + module_path + "\nError summarizing: " + str(e);
-        }
-    }
-    
     walker assemble_docs(repo_url: str, repo_map: dict, ccg: object, symbols: list, outputs_dir: str) -> str {
         repo_name = repo_url.split('/')[-1];
         output_path = py_module.pathlib.Path(outputs_dir) / repo_name / "docs.md";
@@ -48,21 +37,7 @@ node DocGenie {
         
         contributing = py_module.doc_template.render_contributing();
         
-        # Module summaries
-        module_summaries = [];
-        module_set = set();
-        for sym in symbols:
-            mod = sym['module'];
-            if mod not in module_set:
-                module_set.add(mod);
-                # Get symbols for this module
-                mod_symbols = [s for s in symbols if s['module'] == mod];
-                summary = self.summarize_module(mod, mod_symbols, "");
-                module_summaries.append(summary);
-        
-        module_summaries_section = "\n## Module Summaries\n\n" + "\n\n".join(module_summaries);
-        
-        full_docs = py_module.doc_template.assemble_docs(repo_name, repo_url, overview, installation, usage, api_reference, architecture, contributing) + module_summaries_section;
+        full_docs = py_module.doc_template.assemble_docs(repo_name, repo_url, overview, installation, usage, api_reference, architecture, contributing);
         
         with open(str(output_path), 'w') as f {
             f.write(full_docs);
