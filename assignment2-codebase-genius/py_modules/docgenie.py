@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from typing import Dict, Any, List
-import byllm
 from doc_template import (
     render_overview, render_installation, render_usage, 
     render_api_reference, render_architecture, render_contributing,
@@ -12,19 +11,10 @@ from ccg import CodeContextGraph, summarize_module
 
 def rewrite_section_with_llm(section_name: str, content: str) -> str:
     """
-    Use LLM to rewrite a section for better readability.
+    Rewrite a section using a simple fallback.
+    LLM rewriting is now handled in Jac.
     """
-    prompt = f"""Rewrite the following {section_name} section to be more user-friendly and professional. Keep it concise but informative. Do not add new information.
-
-Original:
-{content}
-
-Rewritten:"""
-    try:
-        response = byllm.generate(prompt)
-        return response.strip()
-    except Exception:
-        return content
+    return content
 
 def generate_usage_examples(ccg: 'CodeContextGraph', symbols: List[Dict]) -> List[Dict]:
     """

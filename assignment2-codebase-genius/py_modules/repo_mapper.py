@@ -2,7 +2,6 @@ import os
 import json
 from pathlib import Path
 from typing import Dict, List, Any
-import byllm
 
 IGNORE_PATTERNS = {".git", "node_modules", ".venv", "__pycache__", ".DS_Store"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -47,30 +46,12 @@ def find_readme(root_path: str) -> str:
 
 def summarize_readme(readme_content: str) -> str:
     """
-    Summarize the README content using LLM if available.
-    Falls back to a simple heuristic summary when LLM isn't configured or fails.
+    Summarize the README content using a simple heuristic fallback.
+    LLM summarization is now handled in Jac.
     """
     if not readme_content:
         return "No README found."
-
-    # Try using a language model if available (byllm). Fall back to a short heuristic
-    try:
-        prompt = (
-            """
-You are given the contents of a project's README. Return a concise (1-3 sentence) summary suitable for the top of generated documentation. Do not invent facts; if something is unclear use the phrase 'summary unclear from README'. Keep it neutral and factual.
-
-README:
-"""
-            + readme_content[:5000]
-            + "\n\nSummary:"
-        )
-        response = byllm.generate(prompt)
-        if response and isinstance(response, str) and response.strip():
-            return response.strip()
-    except Exception:
-        # best-effort: continue to fallback
-        pass
-
+    
     # Fallback: first non-empty lines up to a short character budget
     lines = [l.strip() for l in readme_content.split('\n') if l.strip()]
     if not lines:
