@@ -8,4 +8,6 @@ networkx
 graphviz
 jinja2
 tree-sitter
+tree-sitter-python
+tree-sitter-languages
 matplotlib
