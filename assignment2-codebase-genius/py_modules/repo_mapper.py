@@ -2,6 +2,7 @@ import os
 import json
 from pathlib import Path
 from typing import Dict, List, Any
+import byllm
 
 IGNORE_PATTERNS = {".git", "node_modules", ".venv", "__pycache__", ".DS_Store"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -46,12 +47,42 @@ def find_readme(root_path: str) -> str:
 
 def summarize_readme(readme_content: str) -> str:
     """
-    Stub: Summarize the README content. In full implementation, use LLM.
+    Summarize the README content using LLM if available.
+    Falls back to a simple heuristic summary when LLM isn't configured or fails.
     """
     if not readme_content:
         return "No README found."
-    lines = readme_content.split('\n')[:10]  # First 10 lines
-    return "Summary: " + " ".join(lines).strip()
+
+    # Try using a language model if available (byllm). Fall back to a short heuristic
+    try:
+        prompt = (
+            """
+You are given the contents of a project's README. Return a concise (1-3 sentence) summary suitable for the top of generated documentation. Do not invent facts; if something is unclear use the phrase 'summary unclear from README'. Keep it neutral and factual.
+
+README:
+"""
+            + readme_content[:5000]
+            + "\n\nSummary:"
+        )
+        response = byllm.generate(prompt)
+        if response and isinstance(response, str) and response.strip():
+            return response.strip()
+    except Exception:
+        # best-effort: continue to fallback
+        pass
+
+    # Fallback: first non-empty lines up to a short character budget
+    lines = [l.strip() for l in readme_content.split('\n') if l.strip()]
+    if not lines:
+        return "No README found."
+    summary_lines = []
+    chars = 0
+    for l in lines[:10]:
+        summary_lines.append(l)
+        chars += len(l)
+        if chars > 240:
+            break
+    return "Summary: " + " ".join(summary_lines).strip()
 
 def find_entry_points(root_path: str) -> List[str]:
     """
@@ -60,11 +91,12 @@ def find_entry_points(root_path: str) -> List[str]:
     entry_files = []
     root = Path(root_path)
 
-    # Specific files
+    # Specific files (top-level)
     candidates = ["main.py", "app.py", "__main__.py", "setup.py", "pyproject.toml", "Procfile"]
     for cand in candidates:
-        if (root / cand).exists():
-            entry_files.append(str(root / cand))
+        p = root / cand
+        if p.exists():
+            entry_files.append(str(p))
 
     # .jac files
     for jac_file in root.rglob("*.jac"):
@@ -84,7 +116,16 @@ def find_entry_points(root_path: str) -> List[str]:
         except Exception:
             pass
 
-    return entry_files
+    # Dedupe while preserving order
+    seen = set()
+    deduped = []
+    for p in entry_files:
+        if p not in seen:
+            deduped.append(p)
+            seen.add(p)
+
+    # Limit results to a reasonable number (keep top candidates)
+    return deduped[:50]
 
 def map_repo(local_path: str) -> Dict[str, Any]:
     """
