@@ -11,7 +11,7 @@ def main():
     if len(sys.argv) > 1:
         repo_url = sys.argv[1]
     else:
-        repo_url = "https://github.com/octocat/Hello-World"
+        repo_url = "https://github.com/octocat/Spoon-Knife"
 
     result = generate_docs(repo_url)
     if result["success"]:

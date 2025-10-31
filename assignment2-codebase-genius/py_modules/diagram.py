@@ -1,8 +1,13 @@
 import os
 from pathlib import Path
 import networkx as nx
-from networkx.drawing.nx_agraph import graphviz_layout
+try:
+    from networkx.drawing.nx_agraph import graphviz_layout
+    GRAPHVIZ_AVAILABLE = True
+except ImportError:
+    GRAPHVIZ_AVAILABLE = False
 import matplotlib.pyplot as plt
+from ccg import CodeContextGraph
 
 def generate_call_graph(ccg: 'CodeContextGraph', output_dir: str, repo_name: str):
     """
@@ -18,7 +23,10 @@ def generate_call_graph(ccg: 'CodeContextGraph', output_dir: str, repo_name: str
         return None
 
     plt.figure(figsize=(12, 8))
-    pos = graphviz_layout(call_graph, prog='dot')
+    if GRAPHVIZ_AVAILABLE:
+        pos = graphviz_layout(call_graph, prog='dot')
+    else:
+        pos = nx.spring_layout(call_graph)
     nx.draw(call_graph, pos, with_labels=True, node_color='lightblue', 
             node_size=2000, font_size=10, arrows=True)
     plt.title(f"Call Graph - {repo_name}")
@@ -29,7 +37,7 @@ def generate_call_graph(ccg: 'CodeContextGraph', output_dir: str, repo_name: str
     plt.close()
     return str(output_path)
 
-def generate_class_diagram(ccg: 'CodeContextGraph', output_dir: str, repo_name: str):
+def generate_class_diagram(ccg: CodeContextGraph, output_dir: str, repo_name: str):
     """
     Generate class inheritance diagram from CCG.
     """
@@ -42,7 +50,10 @@ def generate_class_diagram(ccg: 'CodeContextGraph', output_dir: str, repo_name: 
         return None
 
     plt.figure(figsize=(12, 8))
-    pos = graphviz_layout(class_graph, prog='dot')
+    if GRAPHVIZ_AVAILABLE:
+        pos = graphviz_layout(class_graph, prog='dot')
+    else:
+        pos = nx.spring_layout(class_graph)
     nx.draw(class_graph, pos, with_labels=True, node_color='lightgreen', 
             node_size=2000, font_size=10, arrows=True)
     plt.title(f"Class Inheritance - {repo_name}")
@@ -53,7 +64,7 @@ def generate_class_diagram(ccg: 'CodeContextGraph', output_dir: str, repo_name: 
     plt.close()
     return str(output_path)
 
-def generate_diagrams(ccg: 'CodeContextGraph', output_dir: str, repo_name: str):
+def generate_diagrams(ccg: CodeContextGraph, output_dir: str, repo_name: str):
     """
     Generate all diagrams and return paths.
     """
