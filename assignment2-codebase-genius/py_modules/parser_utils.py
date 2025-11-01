@@ -5,12 +5,10 @@ from typing import List, Dict, Any
 
 try:
     from tree_sitter import Parser
-    from tree_sitter_languages import get_language
-    PY_LANGUAGE = get_language('python')
-    parser = Parser()
-    parser.set_language(PY_LANGUAGE)
+    from tree_sitter_python import language
+    parser = Parser(language())
     TREE_SITTER_AVAILABLE = True
-except ImportError:
+except Exception:
     parser = None
     TREE_SITTER_AVAILABLE = False
 

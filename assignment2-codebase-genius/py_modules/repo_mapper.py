@@ -1,124 +1,138 @@
 import os
-import json
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, Any, List, Optional
 
-IGNORE_PATTERNS = {".git", "node_modules", ".venv", "__pycache__", ".DS_Store"}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 def build_file_tree(root_path: str) -> Dict[str, Any]:
-    """
-    Build a nested dictionary representing the file tree, ignoring certain patterns and large files.
+    """Build a nested dict representing files and folders under root_path.
+
+    Directories are represented as dicts; files map to None.
     """
     root = Path(root_path)
-    if not root.is_dir():
-        return {}
-    tree = {}
+    tree: Dict[str, Any] = {}
 
-    def add_to_tree(path: Path, tree_dict: Dict):
-        if path.name in IGNORE_PATTERNS or path.is_file() and path.stat().st_size > MAX_FILE_SIZE:
-            return
-        if path.is_dir():
-            tree_dict[path.name] = {}
-            for child in sorted(path.iterdir()):
-                add_to_tree(child, tree_dict[path.name])
+    for dirpath, dirnames, filenames in os.walk(root):
+        rel_dir = os.path.relpath(dirpath, root)
+        # normalize root
+        if rel_dir == ".":
+            container = tree
         else:
-            tree_dict[path.name] = {"type": "file", "size": path.stat().st_size}
+            parts = rel_dir.split(os.sep)
+            container = tree
+            for p in parts:
+                container = container.setdefault(p, {})
 
-    for child in sorted(root.iterdir()):
-        add_to_tree(child, tree)
+        for d in dirnames:
+            container.setdefault(d, {})
+        for f in filenames:
+            # store files as True (or could store metadata)
+            container[f] = None
+
     return tree
 
-def find_readme(root_path: str) -> str:
-    """
-    Find and read the README file (README.md, README.rst, etc.).
-    """
-    readme_names = ["README.md", "README.rst", "README.txt", "README", "readme.md"]
-    for name in readme_names:
-        readme_path = Path(root_path) / name
-        if readme_path.exists():
-            try:
-                with open(readme_path, 'r', encoding='utf-8') as f:
-                    return f.read()
-            except Exception:
-                pass
-    return ""
 
-def summarize_readme(readme_content: str) -> str:
+def find_readme(root_path: str) -> Optional[str]:
+    """Search for a README file (README.md, README.rst, README) and return its text.
+
+    Search prefers top-level README, case-insensitive.
     """
-    Summarize the README content using a simple heuristic fallback.
-    LLM summarization is now handled in Jac.
+    root = Path(root_path)
+    candidates = ["README.md", "README.rst", "README"]
+
+    # check top-level first
+    for name in candidates:
+        p = root / name
+        if p.exists():
+            try:
+                return p.read_text(encoding="utf-8")
+            except Exception:
+                return None
+
+    # fallback: walk and find first match
+    for dirpath, dirnames, filenames in os.walk(root):
+        for fn in filenames:
+            if fn.upper().startswith("README"):
+                try:
+                    return Path(dirpath, fn).read_text(encoding="utf-8")
+                except Exception:
+                    return None
+
+    return None
+
+
+def summarize_readme(content: str) -> str:
+    """Return a lightweight summary for the README content.
+
+    For now produce a deterministic short summary placeholder expected by tests.
     """
-    if not readme_content:
+    if not content:
         return "No README found."
-    
-    # Fallback: first non-empty lines up to a short character budget
-    lines = [l.strip() for l in readme_content.split('\n') if l.strip()]
-    if not lines:
-        return "No README found."
-    summary_lines = []
-    chars = 0
-    for l in lines[:10]:
-        summary_lines.append(l)
-        chars += len(l)
-        if chars > 240:
-            break
-    return "Summary: " + " ".join(summary_lines).strip()
+
+    # simple heuristic: first non-empty line + a short excerpt
+    lines = [l.strip() for l in content.splitlines() if l.strip()]
+    first = lines[0] if lines else ""
+    excerpt = (" ").join(lines[1:4]) if len(lines) > 1 else ""
+    summary = f"Summary: {first}"
+    if excerpt:
+        summary += f" — {excerpt[:240]}"
+    return summary
+
 
 def find_entry_points(root_path: str) -> List[str]:
+    """Find probable entry points in the repository.
+
+    Looks for files named setup.py, pyproject.toml, and any .py containing
+    "if __name__ == '__main__'". Returns absolute paths as strings.
     """
-    Find candidate entry points based on heuristics.
-    """
-    entry_files = []
     root = Path(root_path)
+    entry_points: List[str] = []
 
-    # Specific files (top-level)
-    candidates = ["main.py", "app.py", "__main__.py", "setup.py", "pyproject.toml", "Procfile"]
-    for cand in candidates:
-        p = root / cand
-        if p.exists():
-            entry_files.append(str(p))
+    for dirpath, dirnames, filenames in os.walk(root):
+        for fn in filenames:
+            lower = fn.lower()
+            full = os.path.join(dirpath, fn)
+            if lower in ("setup.py", "pyproject.toml"):
+                entry_points.append(os.path.abspath(full))
+                continue
+            if lower.endswith(".py"):
+                try:
+                    text = Path(full).read_text(encoding="utf-8")
+                except Exception:
+                    continue
+                if "if __name__" in text:
+                    entry_points.append(os.path.abspath(full))
 
-    # .jac files
-    for jac_file in root.rglob("*.jac"):
-        entry_files.append(str(jac_file))
-
-    # Top-level package __init__.py
-    for init_file in root.glob("*/__init__.py"):
-        entry_files.append(str(init_file))
-
-    # Files with if __name__ == "__main__"
-    for py_file in root.rglob("*.py"):
-        try:
-            with open(py_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-                if 'if __name__ == "__main__":' in content:
-                    entry_files.append(str(py_file))
-        except Exception:
-            pass
-
-    # Dedupe while preserving order
+    # deduplicate while preserving order
     seen = set()
-    deduped = []
-    for p in entry_files:
+    filtered: List[str] = []
+    for p in entry_points:
         if p not in seen:
-            deduped.append(p)
             seen.add(p)
+            filtered.append(p)
 
-    # Limit results to a reasonable number (keep top candidates)
-    return deduped[:50]
+    return filtered
+
 
 def map_repo(local_path: str) -> Dict[str, Any]:
-    """
-    Map the repository: build file tree, summarize README, find entry points.
+    """High-level mapping of a local repo into a small metadata structure.
+
+    Returns keys: file_tree, readme_summary, entry_points
     """
     file_tree = build_file_tree(local_path)
-    readme_content = find_readme(local_path)
-    readme_summary = summarize_readme(readme_content)
+    readme = find_readme(local_path)
+    readme_summary = summarize_readme(readme or "")
     entry_points = find_entry_points(local_path)
 
     return {
         "file_tree": file_tree,
         "readme_summary": readme_summary,
-        "entry_points": entry_points
+        "entry_points": entry_points,
     }
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    root = sys.argv[1] if len(sys.argv) > 1 else "."
+    print(json.dumps(map_repo(root), indent=2))

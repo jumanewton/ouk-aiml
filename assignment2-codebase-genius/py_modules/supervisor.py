@@ -13,27 +13,51 @@ def generate_docs(repo_url: str, outputs_dir: str = "./outputs"):
 
     This function is intended to be called from Jac via py_module.supervisor.generate_docs(repo_url).
     """
+    # Validate input
+    if not repo_url or not isinstance(repo_url, str):
+        return {"success": False, "error": "Invalid repository URL provided"}
+
+    # Check if it's a GitHub URL
+    if not (repo_url.startswith("https://github.com/") or repo_url.startswith("http://github.com/")):
+        return {"success": False, "error": "Only GitHub repository URLs are supported"}
+
     clone_result = clone_repo(repo_url)
     if not clone_result.get("success"):
-        return {"success": False, "error": clone_result.get("error")}
+        return {"success": False, "error": f"Failed to clone repository: {clone_result.get('error')}"}
 
     local_path = clone_result.get("path")
     try:
         repo_map = map_repo(local_path)
+        if not repo_map.get('readme_summary') and not repo_map.get('entry_points'):
+            return {"success": False, "error": "Repository appears to be empty or inaccessible"}
+
         targets = repo_map.get("entry_points") or []
         if not targets:
-            # Fallback: a small set of Python files
-            targets = [str(p) for p in Path(local_path).rglob("*.py")][:10]
+            # Fallback: a small set of Python/Jac files
+            all_files = list(Path(local_path).rglob("*.py")) + list(Path(local_path).rglob("*.jac"))
+            targets = [str(p) for p in all_files[:10]]
+
+        if not targets:
+            return {"success": False, "error": "No supported source files found in repository"}
 
         ccg = build_ccg(targets)
 
         symbols = []
         for t in targets:
-            parsed = parse_file(t)
-            symbols.extend(parsed.get("symbols", []))
+            try:
+                parsed = parse_file(t)
+                symbols.extend(parsed.get("symbols", []))
+            except Exception as e:
+                # Continue with other files if one fails
+                continue
+
+        if not symbols:
+            return {"success": False, "error": "Failed to parse any source files"}
 
         docs_path = docgenie_mod.generate_docs(repo_url, repo_map, ccg, symbols, targets, outputs_dir)
         return {"success": True, "docs_path": docs_path}
+    except Exception as e:
+        return {"success": False, "error": f"Documentation generation failed: {str(e)}"}
     finally:
         # best-effort cleanup
         try:
