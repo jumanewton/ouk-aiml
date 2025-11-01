@@ -27,16 +27,8 @@ node CodebaseGenius {
                     "error": "Missing repo_url parameter"
                 };
             }
-
-            try {
-                result = py_module.supervisor.generate_docs(self.repo_url);
-                return result;
-            } catch e {
-                return {
-                    "success": False,
-                    "error": f"Server error: {str(e)}"
-                };
-            }
+            result = py_module.supervisor.generate_docs(self.repo_url);
+            return result;
         }
         obj __specs__ {
             static has auth: bool = False;
