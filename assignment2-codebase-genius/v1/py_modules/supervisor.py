@@ -2,11 +2,11 @@ import shutil
 from pathlib import Path
 
 # Bring in the existing helpers
-from git_utils import clone_repo
-from repo_mapper import map_repo
-from ccg import build_ccg
-from parser_utils import parse_file
-import docgenie as docgenie_mod
+from .git_utils import clone_repo
+from .repo_mapper import map_repo
+from .ccg import build_ccg
+from .parser_utils import parse_file
+from . import docgenie as docgenie_mod
 
 def generate_docs(repo_url: str, outputs_dir: str = "./outputs"):
     """High-level wrapper to run the full pipeline and return a result dict or docs path.
@@ -38,7 +38,24 @@ def generate_docs(repo_url: str, outputs_dir: str = "./outputs"):
             targets = [str(p) for p in all_files[:10]]
 
         if not targets:
-            return {"success": False, "error": "No supported source files found in repository"}
+            # Gather some diagnostics to help the UI and logs explain why there
+            # were no supported source files. Return a small sample of scanned
+            # files and a compact repo_map summary so callers can show useful
+            # feedback to users instead of a terse message.
+            scanned_files = [str(p) for p in Path(local_path).rglob("*") if p.is_file()]
+            scanned_sample = scanned_files[:50]
+            repo_map_summary = {
+                "readme_summary_present": bool(repo_map.get("readme_summary")),
+                "entry_points_count": len(repo_map.get("entry_points") or []),
+            }
+
+            return {
+                "success": False,
+                "error": "No supported source files found in repository",
+                "scanned_files_count": len(scanned_files),
+                "scanned_files_sample": scanned_sample,
+                "repo_map_summary": repo_map_summary,
+            }
 
         ccg = build_ccg(targets)
 
