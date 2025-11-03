@@ -7,6 +7,7 @@ import py_module.supervisor;
 import py_module.repo_mapper;
 import py_module.code_analyzer;
 import py_module.docgenie;
+import dataclasses;
 
 node CodebaseGenius {
     walker init {
@@ -18,6 +19,7 @@ node CodebaseGenius {
         }
     }
 
+    @dataclasses.dataclass
     walker generate_docs {
         has repo_url: str;
         can enter with root entry {

@@ -7,7 +7,7 @@ try:
 except ImportError:
     GRAPHVIZ_AVAILABLE = False
 import matplotlib.pyplot as plt
-from ccg import CodeContextGraph
+from .ccg import CodeContextGraph
 
 def generate_call_graph(ccg: 'CodeContextGraph', output_dir: str, repo_name: str):
     """

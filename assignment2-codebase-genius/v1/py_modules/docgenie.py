@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
 from typing import Dict, Any, List
-from doc_template import (
+from .doc_template import (
     render_overview, render_installation, render_usage, 
     render_api_reference, render_architecture, render_contributing,
     assemble_docs
 )
-from diagram import generate_diagrams
-from ccg import CodeContextGraph, summarize_module
+from .diagram import generate_diagrams
+from .ccg import CodeContextGraph, summarize_module
 
 def rewrite_section_with_llm(section_name: str, content: str) -> str:
     """
