@@ -1,4 +1,4 @@
-import py_module.code_analyzer as ca;
+import py_module.code_analyzer;
 
 node Codebase {
     has repo_path: str;
@@ -6,11 +6,10 @@ node Codebase {
 }
 
 walker AnalyzeCode {
-    can code_analyzer.AnalyzeCode;
     has repo_path: str;
 
     with entry {
         self.repo_path = here.repo_path;
-        here.ccg = ca.analyze_codebase(self.repo_path);
+        here.ccg = py_module.code_analyzer.analyze_codebase(self.repo_path);
     }
 }
