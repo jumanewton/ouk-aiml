@@ -1,4 +1,4 @@
-import py_module.docgenie as dg;
+import py_module.docgenie;
 
 node Documentation {
     has file_tree: dict;
@@ -9,7 +9,6 @@ node Documentation {
 }
 
 walker GenerateDocs {
-    can docgenie.GenerateDocs;
     has file_tree: dict;
     has readme_summary: str;
     has ccg: dict;
@@ -20,6 +19,6 @@ walker GenerateDocs {
         self.readme_summary = here.readme_summary;
         self.ccg = here.ccg;
         self.repo_url = here.repo_url;
-        here.docs_path = dg.generate_docs(self.file_tree, self.readme_summary, self.ccg, self.repo_url);
+        here.docs_path = py_module.docgenie.generate_docs(self.file_tree, self.readme_summary, self.ccg, self.repo_url);
     }
 }

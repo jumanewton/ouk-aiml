@@ -1,19 +1,37 @@
-import * from "repo_mapper.jac";
-import * from "code_analyzer.jac";
-import * from "docgenie.jac";
-import * from "supervisor.jac";
+import py_module.supervisor;
+import py_module.repo_mapper;
+import py_module.code_analyzer;
+import py_module.docgenie;
 
-walker GenerateDocsAPI {
-    can http.get, http.post;
-    has repo_url: str?;
+node CodebaseGenius {
+}
 
-    with entry {
-        if self.request.method == "POST" and "repo_url" in self.request.data {
-            self.repo_url = self.request.data["repo_url"];
-            result = spawn Supervisor(repo_url=self.repo_url);
-            self.response = {"status": "success", "docs_path": result};
-        } else {
-            self.response = {"status": "error", "message": "Invalid request"};
+# Global walker for generate_docs endpoint
+walker generate_docs {
+    has repo_url: str;
+
+    obj __specs__ {
+        static has auth: bool = False;
+    }
+
+    can generate with entry {
+        if not self.repo_url {
+            report {"success": False, "error": "Missing repo_url parameter"};
+            return;
         }
+        result = py_module.supervisor.generate_docs(self.repo_url);
+        report result;
+    }
+}
+
+# Health check endpoint
+walker health_check {
+    obj __specs__ {
+        static has auth: bool = False;
+        static has methods: list = ["get"];
+    }
+
+    can check_health with entry {
+        report {"status": "healthy", "service": "CodebaseGenius", "version": "1.0"};
     }
 }
