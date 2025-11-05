@@ -50,7 +50,20 @@ This system implements a multi-agent pipeline to automatically generate document
 
 ## Running the System
 
-### Option 1: Jac Cloud API (Recommended)
+### Option 1: Streamlit Web UI (Easiest)
+
+For users who prefer a graphical interface:
+
+1. Start the Streamlit app:
+   ```bash
+   streamlit run streamlit_app/app.py
+   ```
+   Opens in browser at http://localhost:8501
+
+2. Choose your API mode (Jac Cloud, Flask API, or Direct Python)
+3. Enter a repository URL and click "Generate Documentation"
+
+### Option 2: Jac Cloud API (Recommended)
 
 Jac Cloud automatically converts walkers to REST endpoints with zero configuration.
 
@@ -72,7 +85,7 @@ Jac Cloud automatically converts walkers to REST endpoints with zero configurati
    curl http://127.0.0.1:8000/walker/health_check
    ```
 
-### Option 2: Python Flask API
+### Option 3: Python Flask API
 
 Traditional web service implementation.
 
@@ -89,7 +102,7 @@ Traditional web service implementation.
         -d '{"repo_url": "https://github.com/your-org/your-repo"}'
    ```
 
-### Option 3: Direct Python Execution
+### Option 4: Direct Python Execution
 
 For development and testing:
 
@@ -125,6 +138,12 @@ python tests/test_integration.py
 
 ### Implementation Options
 
+#### Streamlit Web UI
+- **User Interface**: Modern web app for non-technical users
+- **API Integration**: Can connect to Jac Cloud, Flask, or direct Python
+- **Interactive**: Real-time status updates and document preview
+- **Download**: Direct download of generated documentation
+
 #### Jac Cloud (Modern Agentic)
 - **Walkers**: Define business logic as graph walkers
 - **Automatic APIs**: Walkers become REST endpoints automatically
@@ -144,6 +163,8 @@ python tests/test_integration.py
 - Graphviz (python): Diagram generation
 - Pygments: Code highlighting
 - Flask: Web framework
+- Streamlit: Web UI framework
+- Requests: HTTP client library
 - Jac Cloud: Agentic framework
 - Python-dotenv: Environment variable management
 
