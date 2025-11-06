@@ -7,4 +7,5 @@ pygments==2.18.0
 flask==3.0.3
 streamlit==1.28.1
 requests==2.31.0
+setuptools==75.1.0
 # Add jac if needed, but assume it's installed separately

@@ -6,9 +6,10 @@ No README.md found. This repository does not have a description.
 
 ## Project Structure
 
-- **tmpxt_t53xp/**
+- **tmpb58mbnfu/**
   - Readme.md
   - fine_tune_whisper.ipynb
+  - requirements.txt
   - whisper_transcription.ipynb
 
 ## API Reference

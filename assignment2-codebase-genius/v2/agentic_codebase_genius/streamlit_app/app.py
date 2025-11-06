@@ -76,7 +76,16 @@ if api_mode != 'Direct Python':
                         response = requests.get(health_endpoint, timeout=5)
                         if response.status_code == 200:
                             data = response.json()
-                            st.success(f"✅ {data.get('status', 'OK')}")
+                            # Handle Jac Cloud health response format
+                            if api_mode == 'Jac Cloud (Recommended)' and 'reports' in data:
+                                if len(data['reports']) > 0:
+                                    health_data = data['reports'][0]
+                                    st.success(f"✅ {health_data.get('status', 'OK')}")
+                                else:
+                                    st.warning("⚠️ No health data")
+                            else:
+                                # Flask or direct response
+                                st.success(f"✅ {data.get('status', 'OK')}")
                         else:
                             st.error(f"❌ HTTP {response.status_code}")
                     else:
@@ -106,7 +115,18 @@ if generate_button:
                     )
 
                     if response.status_code == 200:
-                        result = response.json()
+                        raw_result = response.json()
+
+                        # Handle different API response formats
+                        if api_mode == 'Jac Cloud (Recommended)':
+                            # Jac Cloud wraps responses in a reports array
+                            if 'reports' in raw_result and len(raw_result['reports']) > 0:
+                                result = raw_result['reports'][0]  # Take first report
+                            else:
+                                result = {'status': 'error', 'error': 'No reports in Jac Cloud response'}
+                        else:
+                            # Flask API returns direct result
+                            result = raw_result
                     else:
                         result = {
                             'status': 'error',

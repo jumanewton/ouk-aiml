@@ -6,7 +6,7 @@ Notebook collection exploring LangChain patterns, prompt engineering, chains/age
 
 ## Project Structure
 
-- **tmplfgt77vi/**
+- **tmprd5i0vfj/**
   - .gitignore
   - README.md
   - lang_groq.ipynb

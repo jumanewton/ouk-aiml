@@ -56,9 +56,14 @@ For users who prefer a graphical interface:
 
 1. Start the Streamlit app:
    ```bash
-   streamlit run streamlit_app/app.py
+   # From the project root directory
+   streamlit run streamlit_app/app.py --server.headless true
+   # Or use the launcher script:
+   ./run_streamlit.sh
    ```
    Opens in browser at http://localhost:8501
+
+   > **Note**: Use `--server.headless true` to prevent browser auto-opening issues on some systems.
 
 2. Choose your API mode (Jac Cloud, Flask API, or Direct Python)
 3. Enter a repository URL and click "Generate Documentation"
@@ -212,6 +217,48 @@ Health check endpoint.
 
 #### POST /generate-docs
 Same as Jac endpoint above.
+
+## Troubleshooting
+
+### Streamlit Issues
+
+**Error: `ModuleNotFoundError: No module named 'distutils'`**
+- **Cause**: Python 3.12 removed `distutils`, but older Streamlit versions still try to use it
+- **Solution**: `setuptools` is included in `requirements.txt` and provides compatibility
+- **Alternative**: Run with `--server.headless true` flag to prevent browser auto-opening
+
+**Streamlit command not found**
+- **Cause**: Virtual environment not activated or not installed
+- **Solution**: Run `source ../../../venv/bin/activate && pip install -r requirements.txt`
+
+### Graphviz Issues
+
+**Error: `graphviz` module not found**
+- **Cause**: Python package missing
+- **Solution**: `pip install graphviz` (already in requirements.txt)
+
+**Error: `dot` command not found**
+- **Cause**: System Graphviz package missing
+- **Solution**: Install system package:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt install graphviz
+
+  # macOS
+  brew install graphviz
+
+  # Windows: Download from https://graphviz.org/download/
+  ```
+
+### Jac Cloud Issues
+
+**Error: `jac` command not found**
+- **Cause**: Jac Cloud not installed
+- **Solution**: `pip install jac-cloud`
+
+**HTTP endpoints not accessible**
+- **Cause**: Server not started or wrong port
+- **Solution**: Ensure `jac serve jac/main.jac` is running and check port 8000
 
 ## Limitations
 
