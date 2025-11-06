@@ -12,3 +12,13 @@ venv/
 *.jir
 
 *.jir
+*.log
+*.aux
+*.out
+*.toc
+*.gz
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.bbl
+*.blg
