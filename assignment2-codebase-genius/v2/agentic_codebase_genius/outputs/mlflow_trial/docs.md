@@ -6,7 +6,7 @@ A brief description of your project. first_project/ ├── README.md
 
 ## Project Structure
 
-- **tmp2_okr54t/**
+- **tmpf0ckpyig/**
   - .gitignore
   - Dockerfile
   - README.md
